@@ -1,0 +1,40 @@
+import sqlite3                                                   #importing required modules
+ 
+conn = sqlite3.connect('countemail.sqlite')                      #creating a connection and naming our database
+cur = conn.cursor()
+
+cur.execute('''
+DROP TABLE IF EXISTS counts''')                                  #its always good practice to drop the table which we want to create to avoid mistakes
+
+cur.execute('''
+CREATE TABLE counts (org TEXT, count INTEGER)''')                #creating a table named counts with org as text values and count as Integer values
+
+fname = input('Enter file name: ')                               #taking input from user
+if (len(fname) < 1):                                             # if length is less than 1 then it will choose mbox.txt which is already created in my folder
+    fname = 'mbox.txt'
+fh = open(fname)                                                 #if file exists it will choose the file and open it
+list_1 = []                                                      #creating an empty list
+for line in fh:                                                  #reading through lines
+    if not line.startswith('From: '):                            #using the method .startswith and spliting the line if it starts with Fom:
+        continue
+    pieces = line.split() 
+    email = pieces[1]                                            #storing the values which are on pieces[1] in email variable
+    dom = email.find('@')                                        #finding the @ since we all know domine is always next to @
+    org = email[dom+1:len(email)]                                
+
+    cur.execute('SELECT count FROM counts WHERE org = ? ', (org,))
+    row = cur.fetchone()
+    if row is None:
+        cur.execute('''INSERT INTO counts (org, count)
+                VALUES (?, 1)''', (org,))
+    else:
+        cur.execute('UPDATE counts SET count = count + 1 WHERE org = ?',
+                    (org,))
+conn.commit()
+# https://www.sqlite.org/lang_select.html
+sqlstr = 'SELECT org, count FROM counts ORDER BY count DESC LIMIT 10'
+
+for row in cur.execute(sqlstr):
+    print(str(row[0]), row[1])
+
+cur.close()                                                                 #closing the connection
